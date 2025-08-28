@@ -8,27 +8,28 @@ from niki_bot_core import ask_niki_bot  # your function
 
 app = FastAPI()
 
-# --- CORS: allow your frontend origins during development ---
+# --- CORS: allow your frontend origins ---
 ALLOWED_ORIGINS = [
     "http://127.0.0.1:5500",
     "http://localhost:5500",
-    https://nike-bot.onrender.com/,
-    # add your real domain when you deploy the frontend
+    "https://nike-bot.onrender.com",     # <-- your Render static site (PUT YOUR EXACT DOMAIN)
+    "https://amnarafi85.github.io",      # <-- GitHub Pages (if you use it)
+    # add more origins here if needed
 ]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS,   # or ["*"] for quick testing
+    allow_origins=ALLOWED_ORIGINS,   # use ["*"] temporarily for testing only
     allow_credentials=False,
     allow_methods=["POST", "OPTIONS", "GET"],
-    allow_headers=["*"],             # or ["Content-Type"]
+    allow_headers=["Content-Type", "Accept"],
 )
 
 @app.get("/")
 def read_root():
     return {"message": "Niki Bot is running. Use /ask endpoint with a POST request to talk to the bot."}
 
-# Optional: explicit OPTIONS handler (CORSMiddleware already handles it, but this is safe)
+# Optional: explicit OPTIONS handler (CORSMiddleware already handles it)
 @app.options("/ask")
 def options_ask():
     return Response(status_code=204)
@@ -51,7 +52,6 @@ async def ask(request: Request):
 
     question = None
     if isinstance(payload, dict):
-        # accept common keys the frontend may send
         for key in ("question", "message", "query", "prompt"):
             if payload.get(key):
                 question = payload[key]
@@ -61,17 +61,17 @@ async def ask(request: Request):
     if not question:
         try:
             body_text = await request.body()
-            # if Content-Type is text/plain, treat whole body as the question
             if body_text:
                 question = body_text.decode("utf-8").strip()
         except Exception:
             pass
 
-    # Fallback: form-encoded (e.g., from simple HTML forms)
+    # Fallback: form-encoded
     if not question:
-        form = await request.form() if request.headers.get("content-type", "").startswith("application/x-www-form-urlencoded") else {}
-        if "question" in form:
-            question = form["question"]
+        if request.headers.get("content-type", "").startswith("application/x-www-form-urlencoded"):
+            form = await request.form()
+            if "question" in form:
+                question = form["question"]
 
     if not question:
         return JSONResponse({"error": "No question provided"}, status_code=400)
