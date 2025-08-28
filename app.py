@@ -12,6 +12,7 @@ app = FastAPI()
 ALLOWED_ORIGINS = [
     "http://127.0.0.1:5500",
     "http://localhost:5500",
+    https://nike-bot.onrender.com/,
     # add your real domain when you deploy the frontend
 ]
 
